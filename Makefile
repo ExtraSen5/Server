@@ -10,6 +10,9 @@ $(PROG):$(OBJ)
 $(OBJ):
 	g++ -c $(NAME)
 
+install_SFML:
+	sudo apt-get install libsfml-dev	
+
 clean: 
 	$(RM) $(OBJ)
 	$(RM) $(PROG)
