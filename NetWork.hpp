@@ -33,12 +33,12 @@ class Srv
 	std::vector<std::thread*> ClientTread;
 	std::mutex bigmutex;
 	sf::TcpSocket * sockets;
-	int STARtPORT;
-        int LAStPORT;
+	int SPort;
+        int LPort;
 	
 	Srv(int,int);
-	void BigLins(sf::TcpSocket * sockets);
-	void WorkingWithClient(sf::TcpSocket * sockets, int * ind);
+	void BigLins();
+	void WorkingWithClient(int * ind);
 	void SendAllData(sf::TcpSocket & socket);
 	bool __RecData(sf::TcpSocket & socket);//you need char * only
 public:

@@ -104,7 +104,7 @@ SData * _RecData(sf::TcpSocket &socket, int &size)//you need char * only
 bool Srv::__RecData(sf::TcpSocket & socket)//you need char * only
 {
 	SData * new_data;
-	int PortNum = socket.getLocalPort();
+	int PortNum = socket.getLocalPort() - SPort;
 	int size = 0;
 
 	socket.setBlocking(false);
@@ -119,24 +119,29 @@ bool Srv::__RecData(sf::TcpSocket & socket)//you need char * only
 
 	data[PortNum].resize(size);
 	for(int i = 0; i < size; i++)
-		new_data[i].Num = PortNum;
+		new_data[i].Num = PortNum + SPort;
 
 	// // // // // // 
 	bigmutex.lock();
 
 	for(int i = 0; i < size; i++)
 		data[PortNum][i] = new_data[i];
-	for(int i = 0; i < LAStPORT; i++)
+	for(int i = 0; i < updata.size(); i++)
 		updata[PortNum][i] = true;
 
 	bigmutex.unlock();
 	// // // // // // 
 	delete [] new_data;
 
+	if(data[PortNum][0].Com == "!end")
+	{
+		data[PortNum][0].Com = "\'Go out\'";
+		return false;
+	}
 	std::cout << "==================================" << std::endl;
-	std::cout << "  data come from port " 
-		<< data[PortNum][0].Name << std::endl;
-	std::cout << "  itis: " 
+	std::cout << "  data come from " 
+		<< data[PortNum][0].Name;
+	std::cout <<  ": " 
 		<< data[PortNum][0].Com << std::endl;
 	std::cout << "==================================" << std::endl;
 	
@@ -151,16 +156,16 @@ void Srv::SendAllData(sf::TcpSocket & socket)
 	bigmutex.lock();
 
 	for(int i = 0; i < data.size(); i++)
-		if(updata[i][socket.getLocalPort()])
+		if(updata[i][socket.getLocalPort() - SPort])
 			for(int j = 0; j < data[i].size(); j++)
 				size++;
 
 	SData * DataForSend = new SData [size];
 	for(int i = 0; i < data.size(); i++)
 	{
-		if(updata[i][socket.getLocalPort()])
+		if(updata[i][socket.getLocalPort() - SPort])
 		{
-			updata[i][socket.getLocalPort()] = false;
+			updata[i][socket.getLocalPort() - SPort] = false;
 			for(int j = 0; j < data[i].size(); j++)
 				if(data[i][j].Num != 0)	
 					DataForSend[k++] = data[i][j];	
@@ -173,16 +178,17 @@ void Srv::SendAllData(sf::TcpSocket & socket)
 	delete [] DataForSend;	
 }
 
-void Srv::WorkingWithClient(sf::TcpSocket * sockets, int * ind)
+void Srv::WorkingWithClient(int * ind)
 {
-	int MyPort = *ind - STARtPORT;
+	int MyPort = *ind;
 	delete ind;
 	while(1)
 	{
 		if(!__RecData(sockets[MyPort]))
 		{
-			data[MyPort].clear();
-			break;
+			//data[MyPort].clear();
+			sockets[MyPort].disconnect();
+			return;
 		}
 
 		SendAllData(sockets[MyPort]);
@@ -191,27 +197,27 @@ void Srv::WorkingWithClient(sf::TcpSocket * sockets, int * ind)
 	}
 }
 
-void Srv::BigLins(sf::TcpSocket * sockets)
+void Srv::BigLins()
 {
 	while(1)
 	{
-		for(int i = STARtPORT; i < LAStPORT; i++)
+		for(int i = SPort + 1; i < LPort; i++)
 		{		
 			sf::TcpListener lis;	
-			if(sockets[i-STARtPORT].getLocalPort() != 0)
+			if(sockets[i].getLocalPort() != 0)
 				continue;
 
 			if(lis.listen(i) == sf::Socket::Error)
 				continue;
 
-			lis.accept(sockets[i - STARtPORT]);
+			lis.accept(sockets[i]);
 
 			int * ind = new int;
 			*ind = i;
 
-			auto _WWC = [&](int * ind){WorkingWithClient(sockets, ind);};
+			auto _WWC = [&](int * ind){WorkingWithClient(ind);};
 
-			ClientTread[i - STARtPORT] = new std::thread(_WWC, ind);
+			ClientTread[i - SPort] = new std::thread(_WWC, ind);
 
 			std::cout << "==================================" << std::endl;
 			std::cout << "  Client connect to port " << i << std::endl;
@@ -226,43 +232,33 @@ void Srv::Server()
 {
 	auto _BL = [&]
 	{
-		BigLins(sockets);
+		BigLins();
 	};
 	std::thread LThread(_BL);
-	char i;
 	while(1)
 	{
-		std::cin >> i;
-		for(int i = 0; i < data.size(); i++)
-		{
-			if(data[i].size() != 0)
-			{
-				std::cout << data[i][0].Num << ':';
-				for(int j = 0; j < data[i].size(); j++)
-					if(data[i][j].Num != 0)
-						std::cout << data[i][j].Com << ' ';
-				std::cout << std::endl;
-			}
-		}
+		usleep(15);
 	}
 	LThread.join();
 }
 
-Srv::Srv(int SPort, int FPort)
+Srv::Srv(int SPort, int LPort)
 {
-	LAStPORT = FPort;
-	STARtPORT = SPort;
-	data.resize(LAStPORT);
-	ClientTread.resize(LAStPORT);
-	updata.resize(LAStPORT);
+	this->LPort = LPort;
+	this->SPort = SPort;
+	data.resize(LPort - SPort);
+	ClientTread.resize(LPort - SPort);
+	updata.resize(LPort - SPort);
 	for(auto& item: updata)
-		item.resize(LAStPORT);
-	sockets = new sf::TcpSocket[LAStPORT];
+		item.resize(LPort - SPort);
+	sockets = new sf::TcpSocket[LPort - SPort];
 }
 
 Srv::~Srv()
 {
 	delete [] sockets;
+	for(auto item: ClientTread)
+		delete  item;
 }
 
 SData::SData(std::string name, std::string com):
