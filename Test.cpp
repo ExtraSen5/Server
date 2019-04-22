@@ -6,7 +6,7 @@
 #include "NetWork.hpp"
 
 
-void foo1(sf::TcpSocket * socket, int MyPort, bool& end)
+void foo1(sf::TcpSocket * socket, int MyPort, bool* end)
 {
 	while(1)
 	{
@@ -17,13 +17,13 @@ void foo1(sf::TcpSocket * socket, int MyPort, bool& end)
 
 			if(socket -> getLocalPort() == 0)
 			{
-				end = true;
+				*end = true;
 				exit(0);
 			}
 			continue;
 		}
 		for(int i = 0; i < itsize; i++)
-			if(D[i].Num != MyPort && D[i].New /*&& D[i].Num != 0*/)
+			if(D[i].Num != MyPort && D[i].New)
 				std::cout << D[i].Name << ": "
 			       	       << D[i].Com << std::endl;
 		delete [] D;
@@ -37,13 +37,14 @@ int main()
 	std::string IP_name;
 	unsigned short MyPort = 0;
 	sf::TcpSocket socket;
-	char buffer[2000];
 	std::string text, name;
-	char con = 0, mode = 0 ;
-	std::cout << "Enter (s) for server, Enter (c) for client " << std::endl;
-	std::cin >> con;	
 	sf::Packet packet;
-	sf::IpAddress IP = sf::IpAddress::getLocalAddress(); // ServIP
+	sf::IpAddress IP = sf::IpAddress::getLocalAddress(); // ServIPш
+	char con = 0;
+
+	std::cout << "Enter (s) for server, Enter (c) for client " << std::endl;
+	std::cin >> con;
+
 	if(con == 's')
 	{
 		std::cout << IP << std::endl;
@@ -67,7 +68,8 @@ int main()
 	}
 	std::getline(std::cin,text);
 	bool end = false;
-	std::thread threadS(std::bind(&foo1, &socket, MyPort, end));
+	std::thread threadS(std::bind(&foo1, &socket, MyPort, &end));
+
 	while(1)
 	{
 		SData S(name);
@@ -77,7 +79,8 @@ int main()
 		if(end)
 			break;
 	}
-	threadS.detach();
+
+	threadS.join();
 	return 0;
 
 }

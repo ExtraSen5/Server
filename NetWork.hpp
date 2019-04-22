@@ -16,7 +16,7 @@ struct SData
 	bool New = true;
 	int Num = 0;
 	std::string Name;
-	std::string Com;// use 0 to show that 'Com' clear;
+	std::string Com;
 	SData(std::string name = "None", std::string com = "None");
 };
 
@@ -39,8 +39,8 @@ class Srv
 	Srv(int,int);
 	void BigLins(bool * end);
 	void WorkingWithClient(int * ind,  bool * end);
-	void SendAllData(sf::TcpSocket & socket);
-	bool __RecData(sf::TcpSocket & socket);//you need char * only
+	void SendAllData(int MyNum);
+	bool RecData(int MyNum);
 public:
 	static Srv & get(int SPort, int FPort)
 	{
