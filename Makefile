@@ -13,7 +13,7 @@ $(OBJ):
 install_SFML:
 	sudo apt-get install libsfml-dev	
 
-clean: 
+clear: 
 	$(RM) $(OBJ)
 	$(RM) $(PROG)
 

@@ -30,15 +30,15 @@ class Srv
 {		
 	std::vector<std::vector<bool>> updata;
 	std::vector<std::vector<SData>> data;
-	std::vector<std::thread*> ClientTread;
+	std::vector<std::thread*> ClientThread;
 	std::mutex bigmutex;
 	sf::TcpSocket * sockets;
 	int SPort;
         int LPort;
 	
 	Srv(int,int);
-	void BigLins();
-	void WorkingWithClient(int * ind);
+	void BigLins(bool * end);
+	void WorkingWithClient(int * ind,  bool * end);
 	void SendAllData(sf::TcpSocket & socket);
 	bool __RecData(sf::TcpSocket & socket);//you need char * only
 public:

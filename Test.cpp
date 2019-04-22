@@ -47,7 +47,7 @@ int main()
 	if(con == 's')
 	{
 		std::cout << IP << std::endl;
-		Srv::get(10,3000).Server();
+		Srv::get(10000,13000).Server();
 	}	
 	else if(con == 'c')
 	{	
@@ -56,7 +56,7 @@ int main()
 
 		std::cout << "Enter IP:";
 		std::cin >> IP_name;
-		MyPort = SerCon(socket, IP_name);
+		MyPort = SerCon(socket, IP_name, 10000, 13000);
 		SData S;
 		S.Name = name;
 		S.Com = "I'm hear.";

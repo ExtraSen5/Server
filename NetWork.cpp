@@ -72,11 +72,12 @@ SData * _RecData(sf::TcpSocket &socket, int &size)//you need char * only
 	mys = socket.receive(packet);
 
 	if(mys == sf::Socket::Disconnected || mys == sf::Socket::Error)
-	{
+	{	/*
 		std::cout << "==================================" << std::endl;
 		std::cout << "  Client disconnect to port "
 				<< socket.getLocalPort() << std::endl;
 		std::cout << "==================================" << std::endl;
+		*/
 		socket.disconnect();
 		size = -1;
 		return 0;
@@ -178,7 +179,7 @@ void Srv::SendAllData(sf::TcpSocket & socket)
 	delete [] DataForSend;	
 }
 
-void Srv::WorkingWithClient(int * ind)
+void Srv::WorkingWithClient(int * ind, bool * end)
 {
 	int MyPort = *ind;
 	delete ind;
@@ -186,39 +187,47 @@ void Srv::WorkingWithClient(int * ind)
 	{
 		if(!__RecData(sockets[MyPort]))
 		{
-			//data[MyPort].clear();
 			sockets[MyPort].disconnect();
 			return;
 		}
 
 		SendAllData(sockets[MyPort]);
-
+		if(*end)
+			return;
 		usleep(15);
 	}
 }
 
-void Srv::BigLins()
+void Srv::BigLins(bool * end)
 {
 	while(1)
 	{
-		for(int i = SPort + 1; i < LPort; i++)
+		for(int i = 1; i < LPort - SPort; i++)
 		{		
 			sf::TcpListener lis;	
 			if(sockets[i].getLocalPort() != 0)
 				continue;
 
-			if(lis.listen(i) == sf::Socket::Error)
+			if(lis.listen(i + SPort) == sf::Socket::Error)
 				continue;
 
 			lis.accept(sockets[i]);
 
+			if(*end)
+			{
+				for(auto item: ClientThread)
+					if(item != 0)
+						item -> join();
+				return;
+			}
+
 			int * ind = new int;
 			*ind = i;
 
-			auto _WWC = [&](int * ind){WorkingWithClient(ind);};
+			auto _WWC = [&](int * ind){WorkingWithClient(ind, end);};
 
-			ClientTread[i - SPort] = new std::thread(_WWC, ind);
-
+			ClientThread[i] = new std::thread(_WWC, ind);
+				
 			std::cout << "==================================" << std::endl;
 			std::cout << "  Client connect to port " << i << std::endl;
 			std::cout << "==================================" << std::endl;
@@ -230,16 +239,23 @@ void Srv::BigLins()
 
 void Srv::Server()
 {
-	auto _BL = [&]
-	{
-		BigLins();
-	};
+	bool end = false;
+	auto _BL = [&] {BigLins(&end);};
 	std::thread LThread(_BL);
+	std::string com;
 	while(1)
 	{
+		std::cin >> com;
+		if(com == "!end")
+		{
+			end = true;
+			sf::TcpSocket socket;
+			SerCon(socket, "0.0.0.0",10000,13000);
+			LThread.join();
+			return;
+		}
 		usleep(15);
 	}
-	LThread.join();
 }
 
 Srv::Srv(int SPort, int LPort)
@@ -247,18 +263,19 @@ Srv::Srv(int SPort, int LPort)
 	this->LPort = LPort;
 	this->SPort = SPort;
 	data.resize(LPort - SPort);
-	ClientTread.resize(LPort - SPort);
+	ClientThread.resize(LPort - SPort);
 	updata.resize(LPort - SPort);
 	for(auto& item: updata)
 		item.resize(LPort - SPort);
 	sockets = new sf::TcpSocket[LPort - SPort];
+
 }
 
 Srv::~Srv()
 {
 	delete [] sockets;
-	for(auto item: ClientTread)
-		delete  item;
+	for(auto item: ClientThread)
+		delete item;
 }
 
 SData::SData(std::string name, std::string com):
